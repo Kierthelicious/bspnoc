@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Negros Occidental Council</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
     <style>
         :root {
             --primary: #0b2e59;
@@ -134,11 +136,24 @@
         }
 
         .hero {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            position: relative;
+            overflow: hidden;
+            background-color: var(--primary);
+            background-image:
+                linear-gradient(rgba(11, 46, 89, 0.58), rgba(11, 46, 89, 0.58)),
+                url('{{ asset('images/council-building.jpg') }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             color: var(--white);
             text-align: center;
             padding: 2.5rem 1rem 2.2rem;
             border-bottom: 4px solid var(--accent);
+        }
+
+        .hero > * {
+            position: relative;
+            z-index: 1;
         }
 
         .hero-logo {
@@ -162,7 +177,7 @@
         .hero p {
             margin: 0 auto;
             max-width: 720px;
-            color: #e2e8f0;
+            color: #f1f5f9;
         }
 
         .container {
@@ -193,7 +208,10 @@
             color: var(--primary);
             background: #f8fafc;
             border-bottom: 1px solid var(--border);
+            transition: background-color 0.15s ease;
         }
+
+        .dropdown summary:hover { background: #e5e7eb; }
 
         .dropdown summary::-webkit-details-marker { display: none; }
 
@@ -204,6 +222,409 @@
         .dropdown-content ul { margin: 0.3rem 0 0 1.1rem; }
 
         .dropdown-content p { margin: 0.2rem 0 0.3rem; }
+
+        .who-we-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+            gap: 1.15rem;
+            margin-top: 0.35rem;
+        }
+
+        .who-we-card {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            cursor: pointer;
+            transition: box-shadow 0.25s ease, border-color 0.25s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .who-we-card:hover,
+        .who-we-card:focus-visible {
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+            border-color: #b8c5d8;
+        }
+
+        .who-we-card:active {
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+        }
+
+        .who-we-card:focus {
+            outline: none;
+        }
+
+        .who-we-card:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        .who-we-card-figure {
+            margin: 0;
+            aspect-ratio: 16 / 10;
+            background: linear-gradient(145deg, #e2e8f0, #f1f5f9);
+            flex-shrink: 0;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        .who-we-card-figure img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+            transform: scale(1);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .who-we-card:hover .who-we-card-figure img,
+        .who-we-card:focus-visible .who-we-card-figure img {
+            transform: scale(1.06);
+        }
+
+        .who-we-card-body {
+            padding: 1rem 1.1rem 1.15rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0.5rem;
+            min-height: 0;
+        }
+
+        .who-we-card-body h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            line-height: 1.35;
+            color: var(--primary);
+        }
+
+        .who-we-card-body p {
+            margin: 0;
+            color: #475569;
+            font-size: 0.92rem;
+            line-height: 1.55;
+            flex: 1;
+        }
+
+        .who-we-lightbox {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.28s ease, visibility 0.28s ease;
+        }
+
+        .who-we-lightbox.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .who-we-lightbox-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+        }
+
+        .who-we-lightbox-panel {
+            position: relative;
+            z-index: 1;
+            width: min(92vw, 720px);
+            max-height: min(88dvh, 900px);
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: scale(0.92) translateY(12px);
+            opacity: 0;
+            transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+        }
+
+        .who-we-lightbox.is-open .who-we-lightbox-panel {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+
+        .who-we-lightbox-close {
+            position: absolute;
+            top: 0.55rem;
+            right: 0.55rem;
+            z-index: 3;
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.72);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.45rem;
+            line-height: 1;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .who-we-lightbox-close:hover {
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .who-we-lightbox-close:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .who-we-lightbox-figure {
+            margin: 0;
+            flex-shrink: 0;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: min(48dvh, 420px);
+            min-height: 160px;
+            background: #e2e8f0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .who-we-lightbox-figure img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .who-we-lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 44px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.72);
+            color: #fff;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            font-size: 1.7rem;
+            line-height: 1;
+            z-index: 2;
+            transition: background 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+            opacity: 0.95;
+        }
+
+        .who-we-lightbox-nav:hover {
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .who-we-lightbox-nav:active {
+            transform: translateY(-50%) scale(0.97);
+        }
+
+        .who-we-lightbox-nav:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .who-we-lightbox-prev { left: 0.65rem; }
+        .who-we-lightbox-next { right: 0.65rem; }
+
+        @media (max-width: 480px) {
+            .who-we-lightbox-nav {
+                width: 40px;
+                height: 40px;
+                font-size: 1.55rem;
+            }
+
+            .who-we-lightbox-prev { left: 0.5rem; }
+            .who-we-lightbox-next { right: 0.5rem; }
+        }
+
+        .who-we-lightbox-body {
+            padding: 1.15rem 1.35rem 1.35rem;
+            overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .who-we-lightbox-body h2 {
+            margin: 0 0 0.6rem;
+            font-size: clamp(1.15rem, 3.5vw, 1.45rem);
+            color: var(--primary);
+            padding-right: 2.5rem;
+        }
+
+        .who-we-lightbox-body:has(p:empty) h2 {
+            margin-bottom: 0;
+        }
+
+        .who-we-lightbox-body p {
+            margin: 0;
+            color: #475569;
+            font-size: clamp(0.95rem, 2.4vw, 1.05rem);
+            line-height: 1.6;
+        }
+
+        .who-we-lightbox-body p:empty {
+            display: none;
+        }
+
+        body.who-we-lightbox-open {
+            overflow: hidden;
+        }
+
+        @media (min-width: 640px) {
+            .who-we-lightbox-panel {
+                max-height: min(85dvh, 820px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .who-we-card,
+            .who-we-lightbox,
+            .who-we-lightbox-panel,
+            .who-we-card-figure img {
+                transition: none;
+            }
+
+            .who-we-card:hover .who-we-card-figure img,
+            .who-we-card:focus-visible .who-we-card-figure img {
+                transform: none;
+            }
+
+            .who-we-lightbox.is-open .who-we-lightbox-panel {
+                transform: none;
+            }
+        }
+
+        .events-planner {
+            margin-top: 0.95rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.9rem;
+            background: #f8fafc;
+        }
+
+        .events-planner[hidden] {
+            display: none;
+        }
+
+        .events-helper {
+            margin: 0 0 0.7rem;
+            color: #334155;
+            font-size: 0.93rem;
+        }
+
+        .event-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+            gap: 0.6rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .event-form input,
+        .event-form select {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            padding: 0.5rem 0.6rem;
+            font: inherit;
+            background: #fff;
+        }
+
+        .event-form button {
+            border: 0;
+            border-radius: 7px;
+            padding: 0.55rem 0.7rem;
+            background: var(--primary);
+            color: #fff;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .event-form .secondary-action {
+            background: #64748b;
+        }
+
+        .events-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.9rem;
+        }
+
+        .events-card {
+            border: 1px solid #dbe3ed;
+            border-radius: 9px;
+            background: #fff;
+            padding: 0.8rem;
+        }
+
+        .events-card h3 {
+            margin: 0 0 0.5rem;
+            color: #0f172a;
+            font-size: 1rem;
+        }
+
+        #eventCalendar {
+            min-height: 390px;
+        }
+
+        #negrosMap {
+            height: 280px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            margin-bottom: 0.65rem;
+        }
+
+        .selected-event-meta {
+            margin: 0;
+            color: #334155;
+            font-size: 0.92rem;
+        }
+
+        .events-for-date {
+            margin: 0.55rem 0 0;
+            padding-left: 1.1rem;
+        }
+
+        .events-for-date button {
+            border: 0;
+            background: transparent;
+            color: var(--secondary);
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+            font: inherit;
+        }
+
+        .events-for-date .edit-event-btn {
+            margin-left: 0.45rem;
+            color: #0f766e;
+        }
+
+        @media (min-width: 920px) {
+            .events-layout {
+                grid-template-columns: 1.15fr 1fr;
+            }
+        }
 
         .btn {
             display: inline-block;
@@ -266,6 +687,14 @@
             background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%);
         }
         .social-youtube { background: #ff0000; }
+        .social-tiktok {
+            background: #000;
+            color: #fff;
+        }
+        .social-tiktok svg {
+            width: 17px;
+            height: 17px;
+        }
     </style>
 </head>
 <body>
@@ -298,14 +727,62 @@
         <details class="dropdown" id="who-we-are" open>
             <summary>1. Who We Are</summary>
             <div class="dropdown-content">
-                <ul>
-                    <li>Negros Occidental Council History</li>
-                    <li>Negros Occidental Council Executive and Staff</li>
-                    <li>Council Chairman and Executive Board Members</li>
-                    <li>Scout Oath and Law</li>
-                    <li>Scout Ideals</li>
-                    <li>Mission and Vision</li>
-                </ul>
+                <div class="who-we-grid">
+                    <article class="who-we-card" id="council-history" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open Negros Occidental Council History">
+                        <figure class="who-we-card-figure">
+                            <img src="{{ asset('images/council-building.jpg') }}" alt="Negros Occidental Council building" width="640" height="400" loading="lazy">
+                        </figure>
+                        <div class="who-we-card-body">
+                            <h3>Negros Occidental Council History</h3>
+                            <p>How the Boy Scouts of the Philippines serves Negros Occidental—local milestones, growth of units, and the council’s role in youth development across the province.</p>
+                        </div>
+                    </article>
+                    <article class="who-we-card" id="council-executive-staff" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open Council Executive and Staff">
+                        <figure class="who-we-card-figure">
+                            <img src="{{ asset('images/council-building.jpg') }}" alt="Council executive and staff" width="640" height="400" loading="lazy">
+                        </figure>
+                        <div class="who-we-card-body">
+                            <h3>Negros Occidental Council Executive and Staff</h3>
+                            <p>The professional team that supports units, training, and programs day to day—names, roles, and how leaders and families can reach the council office.</p>
+                        </div>
+                    </article>
+                    <article class="who-we-card" id="council-board" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open Council Chairman and Executive Board">
+                        <figure class="who-we-card-figure">
+                            <img src="{{ asset('images/council-building.jpg') }}" alt="Council chairman and executive board" width="640" height="400" loading="lazy">
+                        </figure>
+                        <div class="who-we-card-body">
+                            <h3>Council Chairman and Executive Board Members</h3>
+                            <p>Volunteer leadership guiding policy and priorities for scouting in Negros Occidental—the council chairman, board, and how they work with communities and partners.</p>
+                        </div>
+                    </article>
+                    <article class="who-we-card" id="scout-oath-law" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open Scout Oath and Law">
+                        <figure class="who-we-card-figure">
+                            <img src="{{ asset('images/council-building.jpg') }}" alt="Scouting" width="640" height="400" loading="lazy">
+                        </figure>
+                        <div class="who-we-card-body">
+                            <h3>Scout Oath and Law</h3>
+                            <p>The promises every scout lives by in the BSP program—the Oath and Law as practiced in Negros Occidental units, camps, and service activities.</p>
+                        </div>
+                    </article>
+                    <article class="who-we-card" id="scout-ideals" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open Scout Ideals">
+                        <figure class="who-we-card-figure">
+                            <img src="{{ asset('images/council-building.jpg') }}" alt="Scout ideals" width="640" height="400" loading="lazy">
+                        </figure>
+                        <div class="who-we-card-body">
+                            <h3>Scout Ideals</h3>
+                            <p>Duty to God, country, others, and self—how these ideals shape character, citizenship, and outdoor education for young people in our council.</p>
+                        </div>
+                    </article>
+                    <article class="who-we-card" id="mission-vision" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Open Mission and Vision">
+                        <figure class="who-we-card-figure">
+                            <img src="{{ asset('images/council-building.jpg') }}" alt="Mission and vision" width="640" height="400" loading="lazy">
+                        </figure>
+                        <div class="who-we-card-body">
+                            <h3>Mission and Vision</h3>
+                            <p>Where the council is headed: supporting units, strengthening adult volunteers, and growing responsible, prepared youth throughout Negros Occidental.</p>
+                        </div>
+                    </article>
+                </div>
             </div>
         </details>
 
@@ -343,7 +820,48 @@
             <summary>4. Events</summary>
             <div class="dropdown-content">
                 <p>Schedules for camps, trainings, leadership activities, and provincial events.</p>
-                <a class="btn btn-secondary" href="#">View Event Calendar</a>
+                <button class="btn btn-secondary" id="toggleEventPlanner" type="button">View Event Calendar</button>
+                <section class="events-planner" id="eventPlanner" hidden>
+                    <p class="events-helper">Select a date on the calendar to check events. Add new events and the map will point to their location in Negros Occidental.</p>
+                    <form class="event-form" id="eventForm">
+                        <input id="eventTitle" name="eventTitle" type="text" placeholder="Event title" required>
+                        <input id="eventDate" name="eventDate" type="date" required>
+                        <input id="editingEventId" type="hidden">
+                        <select id="eventLocation" name="eventLocation" required>
+                            <option value="">Select municipality/city</option>
+                            <option value="Bacolod City|10.6765|122.9511">Bacolod City</option>
+                            <option value="Bago City|10.5317|122.8331">Bago City</option>
+                            <option value="Cadiz City|10.9465|123.2884">Cadiz City</option>
+                            <option value="Escalante City|10.8402|123.4994">Escalante City</option>
+                            <option value="Himamaylan City|10.0984|122.8700">Himamaylan City</option>
+                            <option value="Kabankalan City|9.9902|122.8143">Kabankalan City</option>
+                            <option value="La Carlota City|10.4224|122.9202">La Carlota City</option>
+                            <option value="Sagay City|10.9001|123.4115">Sagay City</option>
+                            <option value="San Carlos City|10.4852|123.4188">San Carlos City</option>
+                            <option value="Silay City|10.7960|122.9730">Silay City</option>
+                            <option value="Talisay City|10.7376|122.9667">Talisay City</option>
+                            <option value="Victorias City|10.8998|123.0706">Victorias City</option>
+                            <option value="Hinigaran|10.2700|122.8500">Hinigaran</option>
+                            <option value="Pontevedra|10.3744|122.8678">Pontevedra</option>
+                            <option value="Sipalay|9.7530|122.4657">Sipalay</option>
+                        </select>
+                        <button id="saveEventButton" type="submit">Add Event</button>
+                        <button id="cancelEditEventButton" class="secondary-action" type="button" hidden>Cancel Edit</button>
+                    </form>
+
+                    <div class="events-layout">
+                        <article class="events-card">
+                            <h3>Calendar</h3>
+                            <div id="eventCalendar"></div>
+                        </article>
+                        <article class="events-card">
+                            <h3>Negros Occidental Event Map</h3>
+                            <div id="negrosMap"></div>
+                            <p class="selected-event-meta" id="selectedEventDetails">Pick a date or event to show location details.</p>
+                            <ul class="events-for-date" id="eventsForDate"></ul>
+                        </article>
+                    </div>
+                </section>
             </div>
         </details>
 
@@ -376,9 +894,29 @@
         </details>
     </main>
 
+    <div class="who-we-lightbox" id="whoWeLightbox" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="whoWeLightboxTitle">
+        <div class="who-we-lightbox-backdrop" id="whoWeLightboxBackdrop" tabindex="-1"></div>
+        <div class="who-we-lightbox-panel">
+            <button type="button" class="who-we-lightbox-close" id="whoWeLightboxClose" aria-label="Close expanded view">&times;</button>
+            <figure class="who-we-lightbox-figure">
+                <img id="whoWeLightboxImg" src="" alt="">
+                <button type="button" class="who-we-lightbox-nav who-we-lightbox-prev" id="whoWeLightboxPrev" aria-label="Previous item">
+                    <span aria-hidden="true">&#x2039;</span>
+                </button>
+                <button type="button" class="who-we-lightbox-nav who-we-lightbox-next" id="whoWeLightboxNext" aria-label="Next item">
+                    <span aria-hidden="true">&#x203A;</span>
+                </button>
+            </figure>
+            <div class="who-we-lightbox-body">
+                <h2 id="whoWeLightboxTitle"></h2>
+                <p id="whoWeLightboxText"></p>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <div class="social-links">
-            <a class="social-icon social-facebook" href="https://www.facebook.com/profile.php?id=61567997816720" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <a class="social-icon social-facebook" href="https://www.facebook.com/profile.php?id=61588700494967" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M13.5 22v-8h2.7l.4-3h-3.1V9.1c0-.9.3-1.6 1.7-1.6h1.5V4.8c-.3 0-1.3-.1-2.4-.1-2.4 0-4.1 1.5-4.1 4.2V11H8v3h2.2v8h3.3Z"/>
                 </svg>
@@ -393,9 +931,16 @@
                     <path d="M23 12c0 2.8-.3 4.7-.8 5.8a3 3 0 0 1-1.7 1.7c-1.1.5-3 .8-8.5.8s-7.4-.3-8.5-.8a3 3 0 0 1-1.7-1.7C1.3 16.7 1 14.8 1 12s.3-4.7.8-5.8a3 3 0 0 1 1.7-1.7C4.6 4 6.5 3.7 12 3.7s7.4.3 8.5.8a3 3 0 0 1 1.7 1.7c.5 1.1.8 3 .8 5.8ZM10 8.8v6.4l5.5-3.2L10 8.8Z"/>
                 </svg>
             </a>
+            <a class="social-icon social-tiktok" href="https://www.tiktok.com/@bsp.negros.occide?_r=1&amp;_t=ZS-964XALWFXAy" target="_blank" rel="noopener noreferrer" aria-label="TikTok (@bsp.negros.occide)">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                </svg>
+            </a>
         </div>
         <p>&copy; {{ date('Y') }} Boy Scouts of the Philippines - Negros Occidental Council</p>
     </footer>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
     <script>
         const stickyBar = document.getElementById("stickyBar");
         const heroLogo = document.querySelector(".hero-logo");
@@ -403,10 +948,397 @@
         const sideMenu = document.getElementById("sideMenu");
         const sideMenuOverlay = document.getElementById("sideMenuOverlay");
         const sideMenuLinks = sideMenu.querySelectorAll("a");
+        const toggleEventPlannerButton = document.getElementById("toggleEventPlanner");
+        const eventPlanner = document.getElementById("eventPlanner");
+        const eventForm = document.getElementById("eventForm");
+        const eventTitleInput = document.getElementById("eventTitle");
+        const eventDateInput = document.getElementById("eventDate");
+        const editingEventIdInput = document.getElementById("editingEventId");
+        const saveEventButton = document.getElementById("saveEventButton");
+        const cancelEditEventButton = document.getElementById("cancelEditEventButton");
+        const eventLocationInput = document.getElementById("eventLocation");
+        const eventsForDateElement = document.getElementById("eventsForDate");
+        const selectedEventDetails = document.getElementById("selectedEventDetails");
+        const whoWeLightbox = document.getElementById("whoWeLightbox");
+        const whoWeLightboxBackdrop = document.getElementById("whoWeLightboxBackdrop");
+        const whoWeLightboxClose = document.getElementById("whoWeLightboxClose");
+        const whoWeLightboxPrev = document.getElementById("whoWeLightboxPrev");
+        const whoWeLightboxNext = document.getElementById("whoWeLightboxNext");
+        const whoWeLightboxImg = document.getElementById("whoWeLightboxImg");
+        const whoWeLightboxTitle = document.getElementById("whoWeLightboxTitle");
+        const whoWeLightboxText = document.getElementById("whoWeLightboxText");
+        const whoWeCards = document.querySelectorAll(".who-we-card");
+
+        let whoWeLightboxReturnFocus = null;
+        let whoWeLightboxCloseTimer = null;
+        let whoWeLightboxIndex = -1;
+
+        const NEGROS_OCCIDENTAL_BOUNDS = [[9.45, 122.2], [11.2, 123.7]];
+        const NEGROS_OCCIDENTAL_CENTER = [10.56, 122.95];
+        const EVENTS_STORAGE_KEY = "negros_council_events_v1";
+        const initialEvents = [
+            { id: "evt-1", title: "Council Leaders Training", date: "2026-05-14", locationName: "Bacolod City", lat: 10.6765, lng: 122.9511 },
+            { id: "evt-2", title: "Provincial Camp Orientation", date: "2026-05-22", locationName: "Kabankalan City", lat: 9.9902, lng: 122.8143 },
+            { id: "evt-3", title: "Community Scouting Day", date: "2026-06-03", locationName: "Sagay City", lat: 10.9001, lng: 123.4115 }
+        ];
+
+        let plannerReady = false;
+        let plannerMap = null;
+        let plannerMarker = null;
+        let plannerCalendar = null;
+        let selectedDate = null;
+        let eventRecords = [];
 
         function toggleStickyBar() {
             const heroLogoBottom = heroLogo.offsetTop + heroLogo.offsetHeight;
             stickyBar.classList.toggle("is-visible", window.scrollY > heroLogoBottom);
+        }
+
+        function loadStoredEvents() {
+            const rawData = localStorage.getItem(EVENTS_STORAGE_KEY);
+
+            if (!rawData) {
+                return [...initialEvents];
+            }
+
+            try {
+                const parsed = JSON.parse(rawData);
+                return Array.isArray(parsed) ? parsed : [...initialEvents];
+            } catch (_error) {
+                return [...initialEvents];
+            }
+        }
+
+        function saveEvents() {
+            localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(eventRecords));
+        }
+
+        function eventById(eventId) {
+            return eventRecords.find((item) => item.id === eventId);
+        }
+
+        function locationValueFromEvent(eventInfo) {
+            return `${eventInfo.locationName}|${eventInfo.lat}|${eventInfo.lng}`;
+        }
+
+        function refreshCalendarEvents() {
+            plannerCalendar.removeAllEvents();
+            eventRecords.forEach((item) => {
+                plannerCalendar.addEvent({
+                    title: item.title,
+                    start: item.date,
+                    allDay: true,
+                    extendedProps: { eventId: item.id }
+                });
+            });
+        }
+
+        function resetEventForm() {
+            eventForm.reset();
+            editingEventIdInput.value = "";
+            saveEventButton.textContent = "Add Event";
+            cancelEditEventButton.setAttribute("hidden", "");
+        }
+
+        function startEditingEvent(eventInfo) {
+            editingEventIdInput.value = eventInfo.id;
+            eventTitleInput.value = eventInfo.title;
+            eventDateInput.value = eventInfo.date;
+            eventLocationInput.value = locationValueFromEvent(eventInfo);
+            saveEventButton.textContent = "Save Changes";
+            cancelEditEventButton.removeAttribute("hidden");
+            selectedEventDetails.textContent = `Editing: ${eventInfo.title} (${eventInfo.date})`;
+            showEventOnMap(eventInfo);
+        }
+
+        function showEventOnMap(eventInfo) {
+            if (!plannerMap || !eventInfo) {
+                return;
+            }
+
+            const target = [eventInfo.lat, eventInfo.lng];
+            plannerMap.flyTo(target, 11, { duration: 0.7 });
+            plannerMarker.setLatLng(target);
+            plannerMarker.bindPopup(`<strong>${eventInfo.title}</strong><br>${eventInfo.locationName}<br>${eventInfo.date}`).openPopup();
+            selectedEventDetails.textContent = `${eventInfo.date} - ${eventInfo.title} (${eventInfo.locationName})`;
+        }
+
+        function renderEventsForDate(dateString) {
+            selectedDate = dateString;
+            const matching = eventRecords.filter((item) => item.date === dateString);
+
+            eventsForDateElement.innerHTML = "";
+
+            if (!matching.length) {
+                const emptyItem = document.createElement("li");
+                emptyItem.textContent = `No events found for ${dateString}.`;
+                eventsForDateElement.appendChild(emptyItem);
+                selectedEventDetails.textContent = `No event selected for ${dateString}.`;
+                return;
+            }
+
+            matching.forEach((item) => {
+                const li = document.createElement("li");
+                const viewButton = document.createElement("button");
+                viewButton.type = "button";
+                viewButton.textContent = `${item.title} - ${item.locationName}`;
+                viewButton.addEventListener("click", () => showEventOnMap(item));
+
+                const editButton = document.createElement("button");
+                editButton.type = "button";
+                editButton.className = "edit-event-btn";
+                editButton.textContent = "Edit";
+                editButton.addEventListener("click", () => startEditingEvent(item));
+
+                li.appendChild(viewButton);
+                li.appendChild(editButton);
+                eventsForDateElement.appendChild(li);
+            });
+
+            showEventOnMap(matching[0]);
+        }
+
+        function setupEventsPlanner() {
+            eventRecords = loadStoredEvents();
+
+            plannerMap = L.map("negrosMap", {
+                maxBounds: NEGROS_OCCIDENTAL_BOUNDS,
+                minZoom: 8,
+                maxZoom: 16
+            }).setView(NEGROS_OCCIDENTAL_CENTER, 9);
+
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 18,
+                attribution: "&copy; OpenStreetMap contributors"
+            }).addTo(plannerMap);
+
+            plannerMarker = L.marker(NEGROS_OCCIDENTAL_CENTER).addTo(plannerMap);
+
+            plannerCalendar = new FullCalendar.Calendar(document.getElementById("eventCalendar"), {
+                initialView: "dayGridMonth",
+                height: 430,
+                events: eventRecords.map((item) => ({
+                    title: item.title,
+                    start: item.date,
+                    allDay: true,
+                    extendedProps: { eventId: item.id }
+                })),
+                dateClick: (info) => {
+                    eventDateInput.value = info.dateStr;
+                    renderEventsForDate(info.dateStr);
+                },
+                eventClick: (info) => {
+                    const clicked = eventById(info.event.extendedProps.eventId);
+                    if (clicked) {
+                        eventDateInput.value = clicked.date;
+                        renderEventsForDate(clicked.date);
+                        startEditingEvent(clicked);
+                    }
+                }
+            });
+
+            plannerCalendar.render();
+
+            eventForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+
+                const title = eventTitleInput.value.trim();
+                const date = eventDateInput.value;
+                const locationValue = eventLocationInput.value;
+                const editingId = editingEventIdInput.value;
+
+                if (!title || !date || !locationValue) {
+                    return;
+                }
+
+                const [locationName, lat, lng] = locationValue.split("|");
+                let activeEvent;
+
+                if (editingId) {
+                    const eventIndex = eventRecords.findIndex((item) => item.id === editingId);
+
+                    if (eventIndex === -1) {
+                        return;
+                    }
+
+                    eventRecords[eventIndex] = {
+                        ...eventRecords[eventIndex],
+                        title,
+                        date,
+                        locationName,
+                        lat: Number(lat),
+                        lng: Number(lng)
+                    };
+                    activeEvent = eventRecords[eventIndex];
+                } else {
+                    const newEvent = {
+                        id: `evt-${Date.now()}`,
+                        title,
+                        date,
+                        locationName,
+                        lat: Number(lat),
+                        lng: Number(lng)
+                    };
+                    eventRecords.push(newEvent);
+                    activeEvent = newEvent;
+                }
+
+                saveEvents();
+                refreshCalendarEvents();
+                resetEventForm();
+                eventDateInput.value = date;
+                renderEventsForDate(date);
+                showEventOnMap(activeEvent);
+            });
+
+            cancelEditEventButton.addEventListener("click", () => {
+                resetEventForm();
+                if (selectedDate) {
+                    eventDateInput.value = selectedDate;
+                }
+            });
+
+            const todayDate = new Date().toISOString().slice(0, 10);
+            eventDateInput.value = todayDate;
+            renderEventsForDate(todayDate);
+            plannerReady = true;
+        }
+
+        function contentFromWhoWeCard(card) {
+            const img = card.querySelector("img");
+            const titleEl = card.querySelector("h3");
+            const textEl = card.querySelector("p");
+
+            if (!img || !titleEl) {
+                return null;
+            }
+
+            return {
+                imgSrc: img.currentSrc || img.src,
+                imgAlt: img.alt || "",
+                title: titleEl.textContent || "",
+                text: textEl ? textEl.textContent : ""
+            };
+        }
+
+        function setWhoWeLightboxContent(card, index = -1) {
+            const content = contentFromWhoWeCard(card);
+            if (!content) {
+                return;
+            }
+
+            whoWeLightboxIndex = index;
+            whoWeLightboxImg.src = content.imgSrc;
+            whoWeLightboxImg.alt = content.imgAlt;
+            whoWeLightboxTitle.textContent = content.title;
+            if (whoWeLightboxText) {
+                whoWeLightboxText.textContent = content.text;
+            }
+        }
+
+        function showWhoWeLightboxByIndex(nextIndex) {
+            const cards = Array.from(whoWeCards);
+            if (!cards.length) {
+                return;
+            }
+
+            const wrappedIndex = ((nextIndex % cards.length) + cards.length) % cards.length;
+            setWhoWeLightboxContent(cards[wrappedIndex], wrappedIndex);
+        }
+
+        function openWhoWeLightbox(card) {
+            if (!whoWeLightbox || !card) {
+                return;
+            }
+
+            if (whoWeLightboxCloseTimer) {
+                clearTimeout(whoWeLightboxCloseTimer);
+                whoWeLightboxCloseTimer = null;
+            }
+
+            whoWeLightboxReturnFocus = document.activeElement;
+            const cards = Array.from(whoWeCards);
+            const index = cards.indexOf(card);
+            setWhoWeLightboxContent(card, index);
+
+            whoWeLightbox.removeAttribute("hidden");
+            whoWeLightbox.setAttribute("aria-hidden", "false");
+            document.body.classList.add("who-we-lightbox-open");
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    whoWeLightbox.classList.add("is-open");
+                    if (whoWeLightboxClose) {
+                        whoWeLightboxClose.focus();
+                    }
+                });
+            });
+        }
+
+        function closeWhoWeLightbox() {
+            if (!whoWeLightbox || !whoWeLightbox.classList.contains("is-open")) {
+                return;
+            }
+
+            whoWeLightbox.classList.remove("is-open");
+            document.body.classList.remove("who-we-lightbox-open");
+            whoWeLightbox.setAttribute("aria-hidden", "true");
+
+            if (whoWeLightboxCloseTimer) {
+                clearTimeout(whoWeLightboxCloseTimer);
+            }
+
+            whoWeLightboxCloseTimer = setTimeout(() => {
+                whoWeLightbox.setAttribute("hidden", "");
+                whoWeLightboxCloseTimer = null;
+                if (whoWeLightboxReturnFocus && typeof whoWeLightboxReturnFocus.focus === "function") {
+                    whoWeLightboxReturnFocus.focus();
+                }
+
+                whoWeLightboxReturnFocus = null;
+                whoWeLightboxIndex = -1;
+            }, 300);
+        }
+
+        whoWeCards.forEach((card) => {
+            card.addEventListener("click", () => openWhoWeLightbox(card));
+            card.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openWhoWeLightbox(card);
+                }
+            });
+        });
+
+        if (whoWeLightboxClose) {
+            whoWeLightboxClose.addEventListener("click", (event) => {
+                event.stopPropagation();
+                closeWhoWeLightbox();
+            });
+        }
+
+        if (whoWeLightboxPrev) {
+            whoWeLightboxPrev.addEventListener("click", (event) => {
+                event.stopPropagation();
+                showWhoWeLightboxByIndex(whoWeLightboxIndex - 1);
+            });
+        }
+
+        if (whoWeLightboxNext) {
+            whoWeLightboxNext.addEventListener("click", (event) => {
+                event.stopPropagation();
+                showWhoWeLightboxByIndex(whoWeLightboxIndex + 1);
+            });
+        }
+
+        if (whoWeLightboxBackdrop) {
+            whoWeLightboxBackdrop.addEventListener("click", closeWhoWeLightbox);
+        }
+
+        if (whoWeLightbox) {
+            whoWeLightbox.querySelector(".who-we-lightbox-panel")?.addEventListener("click", (event) => {
+                event.stopPropagation();
+            });
         }
 
         function closeMenu() {
@@ -436,10 +1368,42 @@
 
         sideMenuOverlay.addEventListener("click", closeMenu);
         sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
+        toggleEventPlannerButton.addEventListener("click", () => {
+            const isHidden = eventPlanner.hasAttribute("hidden");
+
+            if (isHidden) {
+                eventPlanner.removeAttribute("hidden");
+
+                if (!plannerReady) {
+                    setupEventsPlanner();
+                } else if (plannerMap) {
+                    setTimeout(() => plannerMap.invalidateSize(), 80);
+                }
+
+                return;
+            }
+
+            eventPlanner.setAttribute("hidden", "");
+        });
 
         window.addEventListener("keydown", (event) => {
             if (event.key === "Escape") {
+                closeWhoWeLightbox();
                 closeMenu();
+            }
+
+            if (!whoWeLightbox || !whoWeLightbox.classList.contains("is-open")) {
+                return;
+            }
+
+            if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                showWhoWeLightboxByIndex(whoWeLightboxIndex - 1);
+            }
+
+            if (event.key === "ArrowRight") {
+                event.preventDefault();
+                showWhoWeLightboxByIndex(whoWeLightboxIndex + 1);
             }
         });
 
